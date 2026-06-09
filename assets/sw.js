@@ -1,9 +1,9 @@
-const CACHE = 'locshare-v2';
+const CACHE = 'icu2-v1';
 const ASSETS = [
-  '../location-share.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  '/',
+  '/assets/manifest.json',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png'
 ];
 self.addEventListener('install', e => {
   e.waitUntil(
