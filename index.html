@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- ── Android PWA / TWA ── -->
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="./assets/manifest.json" />
+
+  <!-- ── iOS / Safari PWA ── -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LocShare" />
+
+  <!-- iOS icons (Safari uses these when you tap "Add to Home Screen") -->
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-192.png" />
+
+  <!-- iOS splash screens — covers most modern iPhones -->
+  <link rel="apple-touch-startup-image"
+        media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+        href="./assets/splash-390x844.png" />
+  <link rel="apple-touch-startup-image"
+        media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)"
+        href="./assets/splash-390x844.png" />
+  <link rel="apple-touch-startup-image"
+        media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)"
+        href="./assets/splash-430x932.png" />
+  <link rel="apple-touch-startup-image"
+        media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)"
+        href="./assets/splash-375x812.png" />
+  <link rel="apple-touch-startup-image"
+        media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)"
+        href="./assets/splash-414x896.png" />
+
+  <!-- Generic fallback icon -->
+  <link rel="icon" type="image/png" href="./assets/icon-192.png" />
+
+  <title>LocShare — Private Location</title>
+
+  <style>
+    :root {
+      --bg: #0b1220;
+      --surface: #111827;
+      --surface-2: #1f2937;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --primary: #22c55e;
+      --danger: #ef4444;
+      --border: rgba(255,255,255,0.10);
+      --shadow: 0 10px 30px rgba(0,0,0,0.4);
+      --radius: 18px;
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #07101b, #0b1220 30%, #0f172a 100%);
+      color: var(--text);
+      min-height: 100dvh;
+      /* Respect iPhone notch / Dynamic Island */
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+      -webkit-tap-highlight-color: transparent;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+
+    /* ── header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0 20px;
+    }
+    header svg { flex-shrink: 0; }
+    header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+    header span { color: var(--primary); }
+
+    /* ── pills ── */
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(34,197,94,0.12);
+      color: #86efac;
+      font-size: 0.8rem;
+      border: 1px solid rgba(34,197,94,0.25);
+    }
+
+    /* ── grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: rgba(17,24,39,0.92);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 12px; color: #e5e7eb; }
+    label { display: block; margin: 10px 0 5px; font-size: 0.88rem; color: #9ca3af; }
+    input {
+      width: 100%; border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.8);
+      color: var(--text);
+      padding: 11px 13px;
+      font: inherit;
+      /* prevent iOS zoom on focus (font must be >= 16px) */
+      font-size: 16px;
+      -webkit-appearance: none;
+    }
+    input:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    button {
+      flex: 1;
+      min-height: 46px;
+      border-radius: 10px;
+      border: none;
+      background: var(--primary);
+      color: #052e16;
+      font: 600 0.92rem/1 inherit;
+      cursor: pointer;
+      -webkit-appearance: none;
+      transition: opacity .15s, transform .1s;
+      /* minimum 44px touch target per Apple HIG */
+      padding: 11px 14px;
+    }
+    button:active { opacity: 0.82; transform: scale(0.97); }
+    button.secondary { background: #243041; color: var(--text); border: 1px solid var(--border); }
+    button.danger { background: var(--danger); color: white; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── status / code ── */
+    .status {
+      margin-top: 10px; padding: 11px 13px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      color: #d1d5db; font-size: 0.88rem; line-height: 1.5;
+    }
+    .code {
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      font-size: 0.83rem;
+      color: #86efac;
+    }
+
+    /* ── map ── */
+    #map {
+      width: 100%; height: 320px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: #0f172a;
+      overflow: hidden;
+      display: grid; place-items: center;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+    #map iframe { width: 100%; height: 100%; border: 0; }
+    #coords {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    /* ── info ── */
+    .info { font-size: 0.86rem; color: var(--muted); line-height: 1.6; }
+    .info strong { color: #d1d5db; }
+
+    /* ── install banner ── */
+    #installBanner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 13px 15px;
+      border-radius: var(--radius);
+      background: rgba(34,197,94,0.10);
+      border: 1px solid rgba(34,197,94,0.3);
+      font-size: 0.88rem;
+      color: #bbf7d0;
+      align-items: center;
+      gap: 10px;
+    }
+    #installBanner button {
+      flex: 0 0 auto;
+      background: var(--primary);
+      color: #052e16;
+      min-height: 36px;
+      font-size: 0.85rem;
+      padding: 7px 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Install banner (Android Chrome only) -->
+    <div id="installBanner">
+      <span style="flex:1">Install LocShare on your home screen for the best experience.</span>
+      <button id="installBtn">Install</button>
+    </div>
+
+    <header>
+      <!-- inline SVG logo: location pin with shield -->
+      <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-label="LocShare logo">
+        <circle cx="21" cy="21" r="21" fill="#052e16"/>
+        <path d="M21 8C16.03 8 12 12.03 12 17c0 7 9 17 9 17s9-10 9-17c0-4.97-4.03-9-9-9z" fill="#22c55e"/>
+        <path d="M21 13.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="#052e16"/>
+        <path d="M18 15.5l1.5 1.5 3-3" stroke="#22c55e" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>Loc<span>Share</span></h1>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">Private · Peer-to-peer · No trackers</div>
+      </div>
+    </header>
+
+    <div class="pills">
+      <span class="pill">No trackers</span>
+      <span class="pill">No accounts</span>
+      <span class="pill">No analytics</span>
+      <span class="pill">iOS &amp; Android</span>
+    </div>
+
+    <div class="grid">
+      <!-- SHARE card -->
+      <div class="card">
+        <h2>📍 Share my location</h2>
+        <label for="shareName">Your name</label>
+        <input id="shareName" placeholder="Trent" autocomplete="given-name" />
+        <label for="roomId">Session code</label>
+        <input id="roomId" placeholder="e.g. beach-ride-27" autocomplete="off" />
+        <div class="btnrow">
+          <button id="hostBtn">Start sharing</button>
+          <button id="stopBtn" class="danger" disabled>Stop</button>
+        </div>
+        <div id="hostStatus" class="status">Enter your name and a session code, then tap Start.</div>
+        <div id="hostLink" class="code" style="display:none"></div>
+      </div>
+
+      <!-- VIEW card -->
+      <div class="card">
+        <h2>👁 View someone's location</h2>
+        <label for="viewerName">Your name</label>
+        <input id="viewerName" placeholder="Friend" autocomplete="given-name" />
+        <label for="joinCode">Session code</label>
+        <input id="joinCode" placeholder="Enter the code they gave you" autocomplete="off" />
+        <div class="btnrow">
+          <button id="joinBtn">Join session</button>
+          <button id="leaveBtn" class="secondary" disabled>Leave</button>
+        </div>
+        <div id="viewerStatus" class="status">Enter the same session code the sharer used, then tap Join.</div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="card">
+      <h2>🗺 Live map</h2>
+      <p class="info" style="margin-bottom:6px">Location renders only in this browser. Nothing is stored after you close this page.</p>
+      <div id="map"><span>Waiting for location…</span></div>
+      <div id="coords" class="code">No location yet.</div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="card" style="margin-top:16px">
+      <h2>🔒 How privacy works</h2>
+      <p class="info">
+        <strong>No SDKs, no analytics, no ads.</strong> This app contains zero third-party tracking libraries.
+        Location updates travel <strong>peer-to-peer via WebRTC</strong> directly between the two browsers.
+        A lightweight public WebSocket relay is used only for the initial handshake (it never sees GPS coordinates).
+        <br><br>
+        <strong>iOS:</strong> Open in Safari → tap the Share icon → <em>Add to Home Screen</em>.<br>
+        <strong>Android:</strong> Open in Chrome → tap the menu → <em>Add to Home screen</em>, or use the install banner above.
+      </p>
+    </div>
+
+  </div><!-- /wrap -->
+
+  <script>
+    // ── Service Worker registration ──────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./assets/sw.js').catch(() => {});
+    }
+
+    // ── Android "Add to Home Screen" banner ──────────────────────
+    let deferredPrompt = null;
+    const banner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      banner.style.display = 'flex';
+    });
+    installBtn && installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      banner.style.display = 'none';
+    });
+
+    // ── Core logic ────────────────────────────────────────────────
+    let ws = null, pc = null, dc = null, watchId = null;
+    let isHost = false, currentCode = '';
+
+    const els = {
+      shareName:    document.getElementById('shareName'),
+      roomId:       document.getElementById('roomId'),
+      hostBtn:      document.getElementById('hostBtn'),
+      stopBtn:      document.getElementById('stopBtn'),
+      hostStatus:   document.getElementById('hostStatus'),
+      hostLink:     document.getElementById('hostLink'),
+      viewerName:   document.getElementById('viewerName'),
+      joinCode:     document.getElementById('joinCode'),
+      joinBtn:      document.getElementById('joinBtn'),
+      leaveBtn:     document.getElementById('leaveBtn'),
+      viewerStatus: document.getElementById('viewerStatus'),
+      map:          document.getElementById('map'),
+      coords:       document.getElementById('coords'),
+    };
+
+    const setStatus = (el, msg) => el.textContent = msg;
+    const safeCode  = (v) => (v || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40);
+
+    function renderMap(lat, lng, name) {
+      const bbox = [lng-0.01, lat-0.01, lng+0.01, lat+0.01].map(n => n.toFixed(5)).join('%2C');
+      els.map.innerHTML = `<iframe title="Live location" loading="lazy"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}">
+      </iframe>`;
+      els.coords.textContent = `${name || 'Person'} · ${lat.toFixed(6)}, ${lng.toFixed(6)} · ${new Date().toLocaleTimeString()}`;
+    }
+
+    function closeAll() {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+      try { dc && dc.close(); } catch {}
+      try { pc && pc.close(); } catch {}
+      try { ws && ws.close(); } catch {}
+      dc = pc = ws = null;
+      els.stopBtn.disabled = true;
+      els.leaveBtn.disabled = true;
+    }
+
+    function connectSignal(code, role) {
+      return new Promise((resolve, reject) => {
+        // Public echo relay — only carries SDP/ICE handshake, not GPS data
+        ws = new WebSocket('wss://relay.demos.kaazing.com/echo');
+        ws.onopen = () => { ws.send(JSON.stringify({type:'join', room: code, role})); resolve(); };
+        ws.onerror = reject;
+        ws.onmessage = async (event) => {
+          let msg; try { msg = JSON.parse(event.data); } catch { return; }
+          if (!msg || msg.room !== currentCode) return;
+          if      (msg.type === 'offer'     && !isHost) {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            ws.send(JSON.stringify({type:'answer', room: currentCode, answer}));
+          } else if (msg.type === 'answer'    && isHost) {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+          } else if (msg.type === 'candidate' && pc) {
+            try { await pc.addIceCandidate(msg.candidate); } catch {}
+          }
+        };
+      });
+    }
+
+    async function setupPeer(hostMode) {
+      isHost = hostMode;
+      pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      pc.onicecandidate = (e) => {
+        if (e.candidate && ws?.readyState === 1)
+          ws.send(JSON.stringify({type:'candidate', room: currentCode, candidate: e.candidate}));
+      };
+      if (hostMode) {
+        dc = pc.createDataChannel('location');
+        dc.onopen = () => setStatus(els.hostStatus, '✅ Connected — live location is streaming.');
+      } else {
+        pc.ondatachannel = (event) => {
+          dc = event.channel;
+          dc.onopen  = () => { setStatus(els.viewerStatus, '✅ Connected — waiting for updates.'); els.leaveBtn.disabled = false; };
+          dc.onmessage = (ev) => {
+            try {
+              const d = JSON.parse(ev.data);
+              if (d.lat && d.lng) renderMap(d.lat, d.lng, d.name);
+            } catch {}
+          };
+        };
+      }
+    }
+
+    async function startHosting() {
+      const name = els.shareName.value.trim() || 'Sharer';
+      currentCode = safeCode(els.roomId.value);
+      if (!currentCode) return setStatus(els.hostStatus, '⚠️ Enter a session code first.');
+      await setupPeer(true);
+      await connectSignal(currentCode, 'host');
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(JSON.stringify({type:'offer', room: currentCode, offer}));
+      els.stopBtn.disabled = false;
+      els.hostLink.style.display = 'block';
+      els.hostLink.textContent = `Session code: ${currentCode}`;
+      setStatus(els.hostStatus, '⏳ Session ready — allow location access when prompted.');
+
+      if (!navigator.geolocation)
+        return setStatus(els.hostStatus, '⚠️ Geolocation not available on this device.');
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const p = { name, lat: pos.coords.latitude, lng: pos.coords.longitude, t: Date.now() };
+          renderMap(p.lat, p.lng, name);
+          if (dc?.readyState === 'open') dc.send(JSON.stringify(p));
+        },
+        (err) => setStatus(els.hostStatus, '⚠️ Location error: ' + err.message),
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
+      );
+    }
+
+    async function joinSession() {
+      currentCode = safeCode(els.joinCode.value);
+      if (!currentCode) return setStatus(els.viewerStatus, '⚠️ Enter the session code first.');
+      await setupPeer(false);
+      await connectSignal(currentCode, 'viewer');
+      setStatus(els.viewerStatus, '⏳ Joined — connecting to host…');
+      els.leaveBtn.disabled = false;
+    }
+
+    els.hostBtn.addEventListener('click', () => startHosting().catch(e => setStatus(els.hostStatus, '❌ ' + e.message)));
+    els.joinBtn.addEventListener('click', () => joinSession().catch(e => setStatus(els.viewerStatus, '❌ ' + e.message)));
+    els.stopBtn.addEventListener('click', () => { closeAll(); setStatus(els.hostStatus, 'Sharing stopped.'); });
+    els.leaveBtn.addEventListener('click', () => { closeAll(); setStatus(els.viewerStatus, 'You left the session.'); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "LocShare — Private Location",
+  "short_name": "LocShare",
+  "description": "Privacy-first live location sharing. No trackers, no accounts, no analytics.",
+  "start_url": "../location-share.html",
+  "scope": "../",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "categories": ["utilities", "navigation"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
