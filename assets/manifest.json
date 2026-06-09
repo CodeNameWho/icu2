@@ -1,9 +1,9 @@
 {
-  "name": "LocShare — Private Location",
-  "short_name": "LocShare",
+  "name": "ICU2 — Private Location",
+  "short_name": "ICU2",
   "description": "Privacy-first live location sharing. No trackers, no accounts, no analytics.",
-  "start_url": "../location-share.html",
-  "scope": "../",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0b1220",
