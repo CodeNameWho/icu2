@@ -339,6 +339,15 @@
     const setStatus = (el, msg) => el.textContent = msg;
     const safeCode  = (v) => (v || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40);
 
+    // Better error message mapping
+    const getGeoErrorMessage = (err) => {
+      if (!err) return 'Unknown location error';
+      if (err.code === 1) return 'Location permission denied. Please enable it in settings.';
+      if (err.code === 2) return 'Location service unavailable. Check GPS is enabled.';
+      if (err.code === 3) return 'Location request timed out. Try again.';
+      return err.message || 'Unknown location error';
+    };
+
     function renderMap(lat, lng, name) {
       const bbox = [lng-0.01, lat-0.01, lng+0.01, lat+0.01].map(n => n.toFixed(5)).join('%2C');
       els.map.innerHTML = `<iframe title="Live location" loading="lazy"
@@ -360,24 +369,53 @@
 
     function connectSignal(code, role) {
       return new Promise((resolve, reject) => {
-        // Public echo relay — only carries SDP/ICE handshake, not GPS data
-        ws = new WebSocket('wss://relay.demos.kaazing.com/echo');
-        ws.onopen = () => { ws.send(JSON.stringify({type:'join', room: code, role})); resolve(); };
-        ws.onerror = reject;
-        ws.onmessage = async (event) => {
-          let msg; try { msg = JSON.parse(event.data); } catch { return; }
-          if (!msg || msg.room !== currentCode) return;
-          if      (msg.type === 'offer'     && !isHost) {
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            ws.send(JSON.stringify({type:'answer', room: currentCode, answer}));
-          } else if (msg.type === 'answer'    && isHost) {
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
-          } else if (msg.type === 'candidate' && pc) {
-            try { await pc.addIceCandidate(msg.candidate); } catch {}
+        // Multiple relay servers for redundancy
+        const relays = [
+          'wss://relay.demos.kaazing.com/echo',
+          'wss://echo.websocket.org/',
+          'wss://ws.postman-echo.com/raw'
+        ];
+        
+        let relayIndex = 0;
+        const tryNextRelay = () => {
+          if (relayIndex >= relays.length) {
+            return reject(new Error('All relay servers failed. Check your internet connection.'));
+          }
+          
+          const relayUrl = relays[relayIndex++];
+          try {
+            ws = new WebSocket(relayUrl);
+            
+            ws.onopen = () => {
+              ws.send(JSON.stringify({type:'join', room: code, role}));
+              resolve();
+            };
+            
+            ws.onerror = () => {
+              ws = null;
+              tryNextRelay();
+            };
+            
+            ws.onmessage = async (event) => {
+              let msg; try { msg = JSON.parse(event.data); } catch { return; }
+              if (!msg || msg.room !== currentCode) return;
+              if      (msg.type === 'offer'     && !isHost) {
+                await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                ws.send(JSON.stringify({type:'answer', room: currentCode, answer}));
+              } else if (msg.type === 'answer'    && isHost) {
+                await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+              } else if (msg.type === 'candidate' && pc) {
+                try { await pc.addIceCandidate(msg.candidate); } catch {}
+              }
+            };
+          } catch (e) {
+            tryNextRelay();
           }
         };
+        
+        tryNextRelay();
       });
     }
 
@@ -409,41 +447,56 @@
       const name = els.shareName.value.trim() || 'Sharer';
       currentCode = safeCode(els.roomId.value);
       if (!currentCode) return setStatus(els.hostStatus, '⚠️ Enter a session code first.');
-      await setupPeer(true);
-      await connectSignal(currentCode, 'host');
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      ws.send(JSON.stringify({type:'offer', room: currentCode, offer}));
-      els.stopBtn.disabled = false;
-      els.hostLink.style.display = 'block';
-      els.hostLink.textContent = `Session code: ${currentCode}`;
-      setStatus(els.hostStatus, '⏳ Session ready — allow location access when prompted.');
+      
+      try {
+        await setupPeer(true);
+        setStatus(els.hostStatus, '⏳ Connecting to relay...');
+        await connectSignal(currentCode, 'host');
+        
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({type:'offer', room: currentCode, offer}));
+        
+        els.stopBtn.disabled = false;
+        els.hostLink.style.display = 'block';
+        els.hostLink.textContent = `Session code: ${currentCode}`;
+        setStatus(els.hostStatus, '⏳ Session ready — allow location access when prompted.');
 
-      if (!navigator.geolocation)
-        return setStatus(els.hostStatus, '⚠️ Geolocation not available on this device.');
+        if (!navigator.geolocation) {
+          return setStatus(els.hostStatus, '⚠️ Geolocation not available on this device.');
+        }
 
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          const p = { name, lat: pos.coords.latitude, lng: pos.coords.longitude, t: Date.now() };
-          renderMap(p.lat, p.lng, name);
-          if (dc?.readyState === 'open') dc.send(JSON.stringify(p));
-        },
-        (err) => setStatus(els.hostStatus, '⚠️ Location error: ' + err.message),
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
-      );
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const p = { name, lat: pos.coords.latitude, lng: pos.coords.longitude, t: Date.now() };
+            renderMap(p.lat, p.lng, name);
+            if (dc?.readyState === 'open') dc.send(JSON.stringify(p));
+          },
+          (err) => setStatus(els.hostStatus, '⚠️ ' + getGeoErrorMessage(err)),
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
+        );
+      } catch (e) {
+        setStatus(els.hostStatus, '❌ ' + (e.message || 'Connection failed'));
+      }
     }
 
     async function joinSession() {
       currentCode = safeCode(els.joinCode.value);
       if (!currentCode) return setStatus(els.viewerStatus, '⚠️ Enter the session code first.');
-      await setupPeer(false);
-      await connectSignal(currentCode, 'viewer');
-      setStatus(els.viewerStatus, '⏳ Joined — connecting to host…');
-      els.leaveBtn.disabled = false;
+      
+      try {
+        await setupPeer(false);
+        setStatus(els.viewerStatus, '⏳ Connecting to relay...');
+        await connectSignal(currentCode, 'viewer');
+        setStatus(els.viewerStatus, '⏳ Joined — connecting to host…');
+        els.leaveBtn.disabled = false;
+      } catch (e) {
+        setStatus(els.viewerStatus, '❌ ' + (e.message || 'Connection failed'));
+      }
     }
 
-    els.hostBtn.addEventListener('click', () => startHosting().catch(e => setStatus(els.hostStatus, '❌ ' + e.message)));
-    els.joinBtn.addEventListener('click', () => joinSession().catch(e => setStatus(els.viewerStatus, '❌ ' + e.message)));
+    els.hostBtn.addEventListener('click', () => startHosting());
+    els.joinBtn.addEventListener('click', () => joinSession());
     els.stopBtn.addEventListener('click', () => { closeAll(); setStatus(els.hostStatus, 'Sharing stopped.'); });
     els.leaveBtn.addEventListener('click', () => { closeAll(); setStatus(els.viewerStatus, 'You left the session.'); });
   </script>
